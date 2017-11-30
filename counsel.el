@@ -2770,6 +2770,14 @@ to custom."
   :type '(repeat face)
   :group 'ivy)
 
+(defcustom counsel-org-goto-max-headline-level 0
+  "Maximum level that a headline can be in order to appear in the `counsel-org-goto` output.
+
+Default of 0 allows all headlines to be displayed.
+"
+  :type 'integer
+  :group 'ivy)
+
 (declare-function org-get-heading "org")
 (declare-function org-goto-marker-or-bmk "org")
 (declare-function outline-next-heading "outline")
@@ -2821,27 +2829,28 @@ to custom."
           (setq level
                 (- (length (buffer-substring-no-properties start-pos (point)))
                    1))
-          (cond ((eq counsel-org-goto-display-style 'path)
-                 ;; Update stack. The empty entry guards against incorrect
-                 ;; headline hierarchies e.g. a level 3 headline immediately
-                 ;; following a level 1 entry.
-                 (while (<= level stack-level)
-                   (pop stack)
-                   (cl-decf stack-level))
-                 (while (> level stack-level)
-                   (push "" stack)
-                   (cl-incf stack-level))
-                 (setf (car stack) (counsel-org-goto--add-face name level))
-                 (setq name (mapconcat
-                             #'identity
-                             (reverse stack)
-                             counsel-org-goto-separator)))
-                (t
-                 (when (eq counsel-org-goto-display-style 'headline)
-                   (setq name (concat (make-string level ?*) " " name)))
-                 (setq name (counsel-org-goto--add-face name level))))
-          (push (cons name (point-marker)) entries))
-        (setq start-pos (outline-next-heading)))
+          (when (>= counsel-org-goto-max-headline-level level)
+            (cond ((eq counsel-org-goto-display-style 'path)
+                   ;; Update stack. The empty entry guards against incorrect
+                   ;; headline hierarchies e.g. a level 3 headline immediately
+                   ;; following a level 1 entry.
+                   (while (<= level stack-level)
+                     (pop stack)
+                     (cl-decf stack-level))
+                   (while (> level stack-level)
+                     (push "" stack)
+                     (cl-incf stack-level))
+                   (setf (car stack) (counsel-org-goto--add-face name level))
+                   (setq name (mapconcat
+                               #'identity
+                               (reverse stack)
+                               counsel-org-goto-separator)))
+                  (t
+                   (when (eq counsel-org-goto-display-style 'headline)
+                     (setq name (concat (make-string level ?*) " " name)))
+                   (setq name (counsel-org-goto--add-face name level))))
+            (push (cons name (point-marker)) entries))
+          (setq start-pos (outline-next-heading))))
       (nreverse entries))))
 
 (defun counsel-org-goto--add-face (name level)
